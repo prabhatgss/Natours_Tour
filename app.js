@@ -17,10 +17,12 @@ const viewRouter = require('./routes/viewRoutes');
 const bookingRouter = require('./routes/bookingRoutes');
 const bookingController = require('./controllers/bookingController');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const app = express();
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
+app.use(cors());
 
 // 1) GLOBAL MIDDLEWARES
 // Set security HTTP headers
