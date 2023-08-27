@@ -52,30 +52,38 @@ exports.getCheckoutSession = catchAsync(async (req, res, next) => {
 //   res.redirect(req.originalUrl.split('?')[0])
 // })
 const createBookingCheckout = async session => {
-  const tour = session.client_reference_id;
-  const user = (await User.findOne({ email: session.customer_email })).id;
-  const price = session.display_items[0].amount / 100;
-  await Booking.create({ tour, user, price });
+  try {
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+
+    const tour = session.client_reference_id;
+    const user = (await User.findOne({ email: session.customer_details.email })).id;
+    const price = lineItems.data[0].amount_subtotal / 100;
+
+    await Booking.create({ tour, user, price });
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    throw new Error('Booking creation failed');
+  }
 };
 
-exports.webhookCheckout = (req,res,next)=>{
-      const signature = req.headers['stripe-signature'];
-      let event;
-      try{
-        event = stripe.webhooks.constructEvent(
-          req.body,
-          signature,
-          process.env.STRIPE_WEBHOOK_SECRET
+exports.webhookCheckout = async (req, res, next) => {
+  const payload = req.rawBody;
+  const sig = req.headers['stripe-signature'];
 
-        )
-      }catch(err){
-        return res.status(400).send(`Webhook Error, ${err.message}`)
-      }
-      if(event.type === 'checkout.session.completed'){
-        createBookingCheckout(event.data.object)
-        res.status(200).json({received:true})
-      }
-}
+  try {
+    const event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      await createBookingCheckout(session);
+
+      res.status(200).json({ received: true });
+    }
+  } catch (error) {
+    console.error('Webhook Error:', error);
+    return res.status(400).send(`Webhook Error: ${error.message}`);
+  }
+};
 
 exports.createBooking = factory.createOne(Booking);
 exports.getAllBooking = factory.getAll(Booking);
