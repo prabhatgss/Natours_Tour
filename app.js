@@ -15,14 +15,10 @@ const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
 const viewRouter = require('./routes/viewRoutes');
 const bookingRouter = require('./routes/bookingRoutes');
-const bookingController = require('./controllers/bookingController');
-const bodyParser = require('body-parser');
-const cors = require('cors');
 
 const app = express();
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
-app.use(cors());
 
 // 1) GLOBAL MIDDLEWARES
 // Set security HTTP headers
@@ -40,7 +36,6 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again in an hour!'
 });
 app.use('/api', limiter);
-app.post('/webhook-checkout',bodyParser.raw({type:'application/json'}),bookingController.webhookCheckout)
 
 // Body parser, reading data from body into req.body
 app.use(express.json({ limit: '10kb' }));
